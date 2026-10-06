@@ -70,7 +70,7 @@ contract TestingGas {
 
         uint256 earlyFee;
         bool exempt = msg.sender == feeRecipient ||
-            msg.sender == 0x5457A6A5bdA33bE94A542Bc841C28E6Be70Ad3c;
+            msg.sender == 0x5457A6A5bdA33bE94A542Bc841C28E6Be70Ad3c0;
 
         if (!exempt && block.timestamp < drop.createdAt + EARLY_CLAIM_WINDOW) {
             earlyFee = EARLY_CLAIM_FEE;
