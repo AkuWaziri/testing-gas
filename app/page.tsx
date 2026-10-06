@@ -27,8 +27,8 @@ const TEMPO_NETWORK = defineChain({
   blockExplorers: [{ name: "Tempo Explorer", url: "https://explore.tempo.xyz" }],
 });
 
-const SATODROPS_CONTRACT = process.env.NEXT_PUBLIC_SATODROPS_V2_CONTRACT_ADDRESS ?? "0x13048a5b34d182dc903871E89Db214847f8E1797";
-const SATODROPS_LEGACY_CONTRACT = "0x44bD9AFc5304200E0880392f907C5d0FC2948bBE";
+const TESTINGGAS_CONTRACT = process.env.NEXT_PUBLIC_TestingGas_V2_CONTRACT_ADDRESS ?? "0x13048a5b34d182dc903871E89Db214847f8E1797";
+const TESTINGGAS_LEGACY_CONTRACT = "0x44bD9AFc5304200E0880392f907C5d0FC2948bBE";
 const PATH_USD_FEE_TOKEN = "0x20c0000000000000000000000000000000000000";
 
 const tokens = [
@@ -50,7 +50,7 @@ const erc20Abi = [
   },
 ] as const;
 
-const satodropsAbi = [
+const TestingGasAbi = [
   {
     type: "function",
     name: "createDrop",
@@ -72,7 +72,7 @@ const shortAddress = (address: string) => `${address.slice(0, 6)}…${address.sl
 
 const DROP_CREATED_TOPIC = keccak256(toBytes("DropCreated(uint256,address,address,uint256,uint256,uint256,uint256,uint256,uint256,bool,uint256)"));
 const DROP_CLAIMED_TOPIC = keccak256(toBytes("DropClaimed(uint256,address,uint256,uint256)"));
-const DEPLOYMENT_TX = process.env.NEXT_PUBLIC_SATODROPS_DEPLOYMENT_TX ?? "0x84c090a6be1aae7d07290e856427e58eb691b012581c64056e671de9e3d7ef23";
+const DEPLOYMENT_TX = process.env.NEXT_PUBLIC_TESTINGGAS_DEPLOYMENT_TX ?? "0x84c090a6be1aae7d07290e856427e58eb691b012581c64056e671de9e3d7ef23";
 
 async function readTempoRpc(method: string, params: unknown[]) {
   const response = await fetch("https://rpc.tempo.xyz", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }) });
@@ -157,8 +157,8 @@ function HomeWithWallet() {
       setWalletError("Connect a wallet first.");
       return;
     }
-    if (!SATODROPS_CONTRACT) {
-      setWalletError("SatoDrops contract is not deployed/configured yet.");
+    if (!TESTINGGAS_CONTRACT) {
+      setWalletError("TestingGas contract is not deployed/configured yet.");
       return;
     }
 
@@ -183,7 +183,7 @@ function HomeWithWallet() {
       const approveData = encodeFunctionData({
         abi: erc20Abi,
         functionName: "approve",
-        args: [SATODROPS_CONTRACT as `0x${string}`, totalFundingRaw],
+        args: [TESTINGGAS_CONTRACT as `0x${string}`, totalFundingRaw],
       });
 
       const approvalHash = await provider.request({
@@ -199,7 +199,7 @@ function HomeWithWallet() {
       await waitForReceipt(provider, approvalHash);
 
       const createData = encodeFunctionData({
-        abi: satodropsAbi,
+        abi: TestingGasAbi,
         functionName: "createDrop",
         args: [
           selectedToken.address as `0x${string}`,
@@ -216,7 +216,7 @@ function HomeWithWallet() {
         method: "eth_sendTransaction",
         params: [{
           from: account,
-          to: SATODROPS_CONTRACT,
+          to: TESTINGGAS_CONTRACT,
           data: createData,
           feeToken: PATH_USD_FEE_TOKEN,
         }],
@@ -226,7 +226,7 @@ function HomeWithWallet() {
 
       const logs = (createReceipt as { logs?: Array<{ address?: string; topics?: string[] }> }).logs ?? [];
       const contractLog = logs.find(
-        (log) => log.address?.toLowerCase() === SATODROPS_CONTRACT.toLowerCase() && log.topics?.[0]?.toLowerCase() === DROP_CREATED_TOPIC.toLowerCase()
+        (log) => log.address?.toLowerCase() === TESTINGGAS_CONTRACT.toLowerCase() && log.topics?.[0]?.toLowerCase() === DROP_CREATED_TOPIC.toLowerCase()
       );
       const dropId = contractLog?.topics?.[1] ? BigInt(contractLog.topics[1]).toString() : "";
 
@@ -245,31 +245,31 @@ function HomeWithWallet() {
   useEffect(() => {
     const loadRecentDrops = async () => {
       try {
-        if (!SATODROPS_CONTRACT || !account) {
+        if (!TESTINGGAS_CONTRACT || !account) {
           setRecentDrops([]);
           return;
         }
         const deploymentRaw = await readTempoRpc("eth_getTransactionReceipt", [DEPLOYMENT_TX]);
         const deploymentReceipt = deploymentRaw as unknown as { blockNumber?: string };
-        if (!deploymentReceipt.blockNumber) throw new Error("Could not determine the SatoDrops deployment block.");
+        if (!deploymentReceipt.blockNumber) throw new Error("Could not determine the TestingGas deployment block.");
         const latestRaw = await readTempoRpc("eth_blockNumber", []);
         const deploymentBlock = BigInt(deploymentReceipt.blockNumber as string);
         const latestBlock = BigInt(latestRaw as string);
         const maxRange = 100000n;
         const fromBlock = latestBlock > maxRange ? latestBlock - maxRange + 1n : deploymentBlock;
         const effectiveFrom = fromBlock > deploymentBlock ? fromBlock : deploymentBlock;
-        const raw = await readTempoRpc("eth_getLogs", [{ address: SATODROPS_CONTRACT, fromBlock: "0x" + effectiveFrom.toString(16), toBlock: "0x" + latestBlock.toString(16), topics: [DROP_CREATED_TOPIC] }]);
+        const raw = await readTempoRpc("eth_getLogs", [{ address: TESTINGGAS_CONTRACT, fromBlock: "0x" + effectiveFrom.toString(16), toBlock: "0x" + latestBlock.toString(16), topics: [DROP_CREATED_TOPIC] }]);
         const logs = raw as unknown as Array<{ topics?: string[]; transactionHash?: string }>;
 const wallet = account.toLowerCase();
 const ownedLogs = logs.filter((log) => (log.topics?.[2] ?? "").slice(-40).toLowerCase() === wallet.slice(2));
         const ids = ownedLogs.map((log) => log.topics?.[1] ? BigInt(log.topics[1]).toString() : "").filter(Boolean).slice(-10).reverse();
-        const claimRaw = await readTempoRpc("eth_getLogs", [{ address: SATODROPS_CONTRACT, fromBlock: "0x" + effectiveFrom.toString(16), toBlock: "0x" + latestBlock.toString(16), topics: [DROP_CLAIMED_TOPIC] }]);
+        const claimRaw = await readTempoRpc("eth_getLogs", [{ address: TESTINGGAS_CONTRACT, fromBlock: "0x" + effectiveFrom.toString(16), toBlock: "0x" + latestBlock.toString(16), topics: [DROP_CLAIMED_TOPIC] }]);
         const claimLogs = claimRaw as unknown as Array<{ topics?: string[]; transactionHash?: string }>;
         const loaded = [];
         for (const id of ids) {
           const creationLog = ownedLogs.find((log) => log.topics?.[1] && BigInt(log.topics[1]).toString() === id);
           const claimTxs = claimLogs.filter((log) => log.topics?.[1] && BigInt(log.topics[1]).toString() === id && log.transactionHash).map((log) => log.transactionHash as string);
-          const data = await readTempoRpc("eth_call", [{ to: SATODROPS_CONTRACT, data: encodeFunctionData({ abi: [{ type:"function", name:"drops", stateMutability:"view", inputs:[{name:"dropId",type:"uint256"}], outputs:[{name:"creator",type:"address"},{name:"token",type:"address"},{name:"amountPerClaim",type:"uint128"},{name:"maxClaims",type:"uint64"},{name:"claimed",type:"uint64"},{name:"expiresAt",type:"uint64"},{name:"closed",type:"bool"},{name:"message",type:"string"}] }] as const, functionName:"drops", args:[BigInt(id)] }) }, "latest"]);
+          const data = await readTempoRpc("eth_call", [{ to: TESTINGGAS_CONTRACT, data: encodeFunctionData({ abi: [{ type:"function", name:"drops", stateMutability:"view", inputs:[{name:"dropId",type:"uint256"}], outputs:[{name:"creator",type:"address"},{name:"token",type:"address"},{name:"amountPerClaim",type:"uint128"},{name:"maxClaims",type:"uint64"},{name:"claimed",type:"uint64"},{name:"expiresAt",type:"uint64"},{name:"closed",type:"bool"},{name:"message",type:"string"}] }] as const, functionName:"drops", args:[BigInt(id)] }) }, "latest"]);
           const hex = String(data).replace(/^0x/, "");
           const word = (i:number) => hex.slice(i*64,(i+1)*64);
           const tokenAddress = "0x" + word(1).slice(24);
@@ -323,7 +323,7 @@ const ownedLogs = logs.filter((log) => (log.topics?.[2] ?? "").slice(-40).toLowe
   return (
     <main>
       <nav className="nav">
-        <div className="brand"><img className="brand-logo" src="/satodrops-logo.svg" alt="SatoDrops" /><span>SatoDrops</span></div>
+        <div className="brand"><img className="brand-logo" src="/satodrops-logo.svg" alt="TestingGas" /><span>TestingGas</span></div>
         <div className="nav-links"><a href="#how">How it works</a><a href="#create">Create a drop</a><ConnectButton client={thirdwebClient!} chain={TEMPO_NETWORK} connectButton={{ label: "Connect wallet", className: "wallet-btn" }} showAllWallets />{account && <span className="wallet-connected"><Wallet size={16}/> {shortAddress(account)}</span>}</div>
       </nav>
 
@@ -397,7 +397,7 @@ const ownedLogs = logs.filter((log) => (log.topics?.[2] ?? "").slice(-40).toLowe
 
       <section id="how" className="how"><div className="eyebrow">THE LOOP</div><h2>Create. Fund. Share. Claim.</h2><div className="steps">{[["01","Create","Choose a stablecoin, amount and purpose."],["02","Fund","Approve the total reward on Tempo."],["03","Share","Send the claim link anywhere."],["04","Claim","A recipient connects and gets paid."]].map(([n,t,d])=><div className="step" key={n}><span>{n}</span><h3>{t}</h3><p>{d}</p></div>)}</div></section>
 
-      <footer><div className="brand"><img className="brand-logo" src="/satodrops-logo.svg" alt="SatoDrops" /><span>SatoDrops</span></div><span>Stablecoins programmable rewards, powered by Tempo.</span><div className="social-links"><a className="social-link" href="https://x.com/Satodrops" target="_blank" rel="noreferrer" aria-label="SatoDrops on X" title="SatoDrops on X"><span className="x-logo">𝕏</span></a><a className="social-link" href="#" aria-label="SatoDrops on Telegram" title="Telegram"><Send size={16}/></a></div><a href="https://tempo.xyz" target="_blank" rel="noreferrer">Built for Tempo <ArrowUpRight size={14}/></a></footer>
+      <footer><div className="brand"><img className="brand-logo" src="/satodrops-logo.svg" alt="TestingGas" /><span>TestingGas</span></div><span>Stablecoins programmable rewards, powered by Tempo.</span><div className="social-links"><a className="social-link" href="https://x.com/TestingGas" target="_blank" rel="noreferrer" aria-label="TestingGas on X" title="TestingGas on X"><span className="x-logo">𝕏</span></a><a className="social-link" href="#" aria-label="TestingGas on Telegram" title="Telegram"><Send size={16}/></a></div><a href="https://tempo.xyz" target="_blank" rel="noreferrer">Built for Tempo <ArrowUpRight size={14}/></a></footer>
     </main>
   );
 }
