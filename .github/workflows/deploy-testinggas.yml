@@ -1,0 +1,42 @@
+name: Deploy TestingGas Contract
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type DEPLOY to authorize deployment"
+        required: true
+        type: string
+
+jobs:
+  deploy:
+    if: ${{ inputs.confirm == 'DEPLOY' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      - name: Build contract
+        run: forge build
+
+      - name: Deploy to Tempo
+        env:
+          PRIVATE_KEY: ${{ secrets.TESTINGGAS_DEPLOYER_PRIVATE_KEY }}
+        run: |
+          if [ -z "$PRIVATE_KEY" ]; then
+            echo "Missing TESTINGGAS_DEPLOYER_PRIVATE_KEY secret"
+            exit 1
+          fi
+          forge script script/DeployTestingGas.s.sol:DeployTestingGas \
+            --rpc-url https://rpc.tempo.xyz \
+            --broadcast \
+            --private-key "$PRIVATE_KEY" \
+            -vvvv
