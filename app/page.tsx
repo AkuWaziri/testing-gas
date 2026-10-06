@@ -7,7 +7,7 @@ import { useState } from "react";
 const CHAIN_ID = "0x1079";
 const RPC = "https://rpc.tempo.xyz";
 const EXPLORER = "https://explore.tempo.xyz";
-const CONTRACT = "0xA2E7511ACb110520B067Cd753448D5C9854AA007";
+const CONTRACT = "0x2a6722e0c00DC1BA531BB15c551bF2F080285603";
 const GAS_TOKEN = "0x20C0000000000000000000000000000000000000";
 
 const tokens = [
