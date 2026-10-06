@@ -6,15 +6,16 @@ interface IERC20 {
     function transferFrom(address from, address to, uint256 amount) external returns (bool);
 }
 
+interface ITIP20Factory {
+    function isTIP20(address token) external view returns (bool);
+}
+
 contract TestingGas {
     uint256 public constant CREATION_FEE_BPS = 100;
     uint256 public constant EARLY_CLAIM_WINDOW = 180;
-    // All supported claim-fee tokens use 6 decimals, so this is exactly 100 units.
     uint256 public constant EARLY_CLAIM_FEE = 100_000_000;
 
-    address public constant USDC = 0x20C000000000000000000000b9537d11c60E8b50;
-    address public constant USDT = 0x20C00000000000000000000014f22CA97301EB73;
-    address public constant PATH_USD = 0x20C0000000000000000000000000000000000000;
+    address public constant TIP20_FACTORY = 0x20Fc000000000000000000000000000000000000;
     address public constant SECOND_EXEMPT_WALLET = 0x5457A6A5bdA33bE94A542Bc841C28E6Be70Ad3c0;
 
     address public immutable feeRecipient;
@@ -22,7 +23,6 @@ contract TestingGas {
     struct Drop {
         address creator;
         address token;
-        address earlyClaimFeeToken;
         uint256 totalAmount;
         uint256 remaining;
         uint256 createdAt;
@@ -40,19 +40,19 @@ contract TestingGas {
         address indexed token,
         uint256 amount,
         uint256 creationFee,
-        uint256 createdAt,
-        address earlyClaimFeeToken
+        uint256 createdAt
     );
-    event Claimed(uint256 indexed dropId, address indexed claimant, uint256 amount, uint256 earlyClaimFee);
+    event Claimed(uint256 indexed dropId, address indexed claimant, uint256 amount, uint256 earlyClaimFee, address feeToken);
     event DropClosed(uint256 indexed dropId);
 
     error InvalidToken();
-    error InvalidEarlyClaimFeeToken();
     error InvalidAmount();
+    error InvalidFeeToken();
     error DropNotFound();
     error DropInactive();
     error AlreadyClaimed();
     error InsufficientRemaining();
+    error InsufficientFeeBalance();
     error TransferFailed();
     error FeeTransferFailed();
 
@@ -61,13 +61,8 @@ contract TestingGas {
         feeRecipient = _feeRecipient;
     }
 
-    function createDrop(
-        address token,
-        uint256 amount,
-        address _earlyClaimFeeToken
-    ) external returns (uint256 dropId) {
+    function createDrop(address token, uint256 amount) external returns (uint256 dropId) {
         if (token == address(0)) revert InvalidToken();
-        if (!_isSupportedFeeToken(_earlyClaimFeeToken)) revert InvalidEarlyClaimFeeToken();
         if (amount == 0) revert InvalidAmount();
 
         uint256 creationFee = amount / 100;
@@ -80,7 +75,6 @@ contract TestingGas {
         drops[dropId] = Drop(
             msg.sender,
             token,
-            _earlyClaimFeeToken,
             amount,
             amount,
             block.timestamp,
@@ -94,8 +88,7 @@ contract TestingGas {
             token,
             amount,
             creationFee,
-            block.timestamp,
-            _earlyClaimFeeToken
+            block.timestamp
         );
     }
 
@@ -111,7 +104,7 @@ contract TestingGas {
         return account == feeRecipient || account == SECOND_EXEMPT_WALLET;
     }
 
-    function claim(uint256 dropId) external {
+    function claim(uint256 dropId, address feeToken) external {
         Drop storage drop = drops[dropId];
         if (drop.creator == address(0)) revert DropNotFound();
         if (!drop.active) revert DropInactive();
@@ -119,8 +112,16 @@ contract TestingGas {
         if (drop.remaining == 0) revert InsufficientRemaining();
 
         uint256 earlyFee = earlyClaimFee(dropId, msg.sender);
+
         if (earlyFee > 0) {
-            if (!IERC20(drop.earlyClaimFeeToken).transferFrom(msg.sender, feeRecipient, earlyFee)) {
+            if (feeToken == address(0) || !ITIP20Factory(TIP20_FACTORY).isTIP20(feeToken)) {
+                revert InvalidFeeToken();
+            }
+
+            uint256 balance = _balanceOf(feeToken, msg.sender);
+            if (balance < earlyFee) revert InsufficientFeeBalance();
+
+            if (!IERC20(feeToken).transferFrom(msg.sender, feeRecipient, earlyFee)) {
                 revert FeeTransferFailed();
             }
         }
@@ -136,10 +137,14 @@ contract TestingGas {
             emit DropClosed(dropId);
         }
 
-        emit Claimed(dropId, msg.sender, 1, earlyFee);
+        emit Claimed(dropId, msg.sender, 1, earlyFee, feeToken);
     }
 
-    function _isSupportedFeeToken(address token) internal pure returns (bool) {
-        return token == USDC || token == USDT || token == PATH_USD;
+    function _balanceOf(address token, address account) internal view returns (uint256 balance) {
+        (bool ok, bytes memory data) = token.staticcall(
+            abi.encodeWithSignature("balanceOf(address)", account)
+        );
+        if (!ok || data.length < 32) return 0;
+        balance = abi.decode(data, (uint256));
     }
 }
