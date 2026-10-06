@@ -72,7 +72,7 @@ const shortAddress = (address: string) => `${address.slice(0, 6)}…${address.sl
 
 const DROP_CREATED_TOPIC = keccak256(toBytes("DropCreated(uint256,address,address,uint256,uint256,uint256,uint256,uint256,uint256,bool,uint256)"));
 const DROP_CLAIMED_TOPIC = keccak256(toBytes("DropClaimed(uint256,address,uint256,uint256)"));
-const TESTINGGAS_TESTINGGAS_DEPLOYMENT_TX = process.env.NEXT_PUBLIC_TESTINGGAS_TESTINGGAS_DEPLOYMENT_TX ?? "0x84c090a6be1aae7d07290e856427e58eb691b012581c64056e671de9e3d7ef23";
+const TESTINGGAS_DEPLOYMENT_TX = process.env.NEXT_PUBLIC_TESTINGGAS_TESTINGGAS_DEPLOYMENT_TX ?? "0x84c090a6be1aae7d07290e856427e58eb691b012581c64056e671de9e3d7ef23";
 
 async function readTempoRpc(method: string, params: unknown[]) {
   const response = await fetch("https://rpc.tempo.xyz", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }) });
@@ -397,7 +397,7 @@ const ownedLogs = logs.filter((log) => (log.topics?.[2] ?? "").slice(-40).toLowe
 
       <section id="how" className="how"><div className="eyebrow">THE LOOP</div><h2>Create. Fund. Share. Claim.</h2><div className="steps">{[["01","Create","Choose a stablecoin, amount and purpose."],["02","Fund","Approve the total reward on Tempo."],["03","Share","Send the claim link anywhere."],["04","Claim","A recipient connects and gets paid."]].map(([n,t,d])=><div className="step" key={n}><span>{n}</span><h3>{t}</h3><p>{d}</p></div>)}</div></section>
 
-      <footer><div className="brand"><img className="brand-logo" src="/satodrops-logo.svg" alt="TestingGas" /><span>TestingGas</span></div><span>Stablecoins programmable rewards, powered by Tempo.</span><div className="social-links"><a className="social-link" href="https://x.com/TestingGas" target="_blank" rel="noreferrer" aria-label="TestingGas on X" title="TestingGas on X"><span className="x-logo">𝕏</span></a><a className="social-link" href="#" aria-label="TestingGas on Telegram" title="Telegram"><Send size={16}/></a></div><a href="https://tempo.xyz" target="_blank" rel="noreferrer">Built for Tempo <ArrowUpRight size={14}/></a></footer>
+      <footer><div className="brand"><img className="brand-logo" src="/satodrops-logo.svg" alt="TestingGas" /><span>TestingGas</span></div><span>Stablecoins programmable rewards, powered by Tempo.</span><div className="social-links"><a className="social-link" href="#" aria-label="TestingGas on Telegram" title="Telegram"><Send size={16}/></a></div><a href="https://tempo.xyz" target="_blank" rel="noreferrer">Built for Tempo <ArrowUpRight size={14}/></a></footer>
     </main>
   );
 }
