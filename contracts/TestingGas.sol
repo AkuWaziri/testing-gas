@@ -12,8 +12,8 @@ interface ITIP20Factory {
 
 contract TestingGas {
     uint256 public constant CREATION_FEE_BPS = 100;
-    uint256 public constant EARLY_CLAIM_WINDOW = 180;
-    uint256 public constant EARLY_CLAIM_FEE = 5_000_000;
+    uint256 public constant EARLY_CLAIM_WINDOW = 600;
+    uint256 public constant EARLY_CLAIM_UNITS = 5;
 
     address public constant TIP20_FACTORY = 0x20Fc000000000000000000000000000000000000;
     address public constant SECOND_EXEMPT_WALLET = 0x5457A6A5bdA33bE94A542Bc841C28E6Be70Ad3c0;
@@ -48,6 +48,7 @@ contract TestingGas {
     error InvalidToken();
     error InvalidAmount();
     error InvalidFeeToken();
+    error InvalidTokenDecimals();
     error DropNotFound();
     error DropInactive();
     error AlreadyClaimed();
@@ -92,13 +93,30 @@ contract TestingGas {
         );
     }
 
-    function earlyClaimFee(uint256 dropId, address claimant) public view returns (uint256) {
+    function earlyClaimFee(uint256 dropId, address claimant, address feeToken) public view returns (uint256) {
         Drop storage drop = drops[dropId];
         if (drop.creator == address(0)) revert DropNotFound();
         if (block.timestamp >= drop.createdAt + EARLY_CLAIM_WINDOW) return 0;
         if (isEarlyClaimExempt(claimant)) return 0;
-        return EARLY_CLAIM_FEE;
+        if (feeToken == address(0) || !ITIP20Factory(TIP20_FACTORY).isTIP20(feeToken)) {
+            revert InvalidFeeToken();
+        }
+        return _feeAmount(feeToken);
     }
+
+    function claimDeadline(uint256 dropId) external view returns (uint256) {
+        Drop storage drop = drops[dropId];
+        if (drop.creator == address(0)) revert DropNotFound();
+        return drop.createdAt + EARLY_CLAIM_WINDOW;
+    }
+
+    function isClaimable(uint256 dropId, address claimant) external view returns (bool claimable, uint256 earlyFee) {
+        Drop storage drop = drops[dropId];
+        if (drop.creator == address(0)) revert DropNotFound();
+        if (!drop.active || drop.remaining == 0 || hasClaimed[dropId][claimant]) return (false, 0);
+        return (true, 0);
+    }
+
 
     function isEarlyClaimExempt(address account) public view returns (bool) {
         return account == feeRecipient || account == SECOND_EXEMPT_WALLET;
@@ -111,12 +129,12 @@ contract TestingGas {
         if (hasClaimed[dropId][msg.sender]) revert AlreadyClaimed();
         if (drop.remaining == 0) revert InsufficientRemaining();
 
-        uint256 earlyFee = earlyClaimFee(dropId, msg.sender);
-
-        if (earlyFee > 0) {
+        uint256 earlyFee = 0;
+        if (block.timestamp < drop.createdAt + EARLY_CLAIM_WINDOW && !isEarlyClaimExempt(msg.sender)) {
             if (feeToken == address(0) || !ITIP20Factory(TIP20_FACTORY).isTIP20(feeToken)) {
                 revert InvalidFeeToken();
             }
+            earlyFee = _feeAmount(feeToken);
 
             uint256 balance = _balanceOf(feeToken, msg.sender);
             if (balance < earlyFee) revert InsufficientFeeBalance();
@@ -138,6 +156,18 @@ contract TestingGas {
         }
 
         emit Claimed(dropId, msg.sender, 1, earlyFee, feeToken);
+    }
+
+    function _feeAmount(address token) internal view returns (uint256) {
+        (bool ok, bytes memory data) = token.staticcall(
+            abi.encodeWithSignature("decimals()")
+        );
+        if (!ok || data.length < 32) revert InvalidTokenDecimals();
+
+        uint256 decimals = abi.decode(data, (uint256));
+        if (decimals > 77) revert InvalidTokenDecimals();
+
+        return EARLY_CLAIM_UNITS * (10 ** decimals);
     }
 
     function _balanceOf(address token, address account) internal view returns (uint256 balance) {
