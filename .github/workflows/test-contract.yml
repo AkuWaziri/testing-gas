@@ -1,0 +1,40 @@
+name: Test SatoDrops Contract
+
+on:
+  push:
+    paths:
+      - "contracts/**"
+      - "test/**"
+      - "foundry.toml"
+      - ".github/workflows/test-contract.yml"
+  pull_request:
+    paths:
+      - "contracts/**"
+      - "test/**"
+      - "foundry.toml"
+      - ".github/workflows/test-contract.yml"
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      - name: Install forge-std
+        run: forge install foundry-rs/forge-std --no-commit
+
+      - name: Build
+        run: forge build
+
+      - name: Test
+        run: forge test -vv
