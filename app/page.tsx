@@ -27,7 +27,6 @@ const createAbi = [{
   inputs: [
     { name: "token", type: "address" },
     { name: "amount", type: "uint256" },
-    { name: "earlyClaimFeeToken", type: "address" },
   ],
   outputs: [{ name: "dropId", type: "uint256" }],
 }] as const;
@@ -76,7 +75,6 @@ async function connectWallet() {
 
 export default function Home() {
   const [token, setToken] = useState(tokens[0]);
-  const [feeToken, setFeeToken] = useState(tokens[2]);
   const [amount, setAmount] = useState("5");
   const [account, setAccount] = useState("");
   const [error, setError] = useState("");
@@ -116,7 +114,7 @@ export default function Home() {
       const data = encodeFunctionData({
         abi: createAbi,
         functionName: "createDrop",
-        args: [token.address as `0x${string}`, rawAmount, feeToken.address as `0x${string}`],
+        args: [token.address as `0x${string}`, rawAmount],
       });
 
       setStatus("Confirm the drop creation transaction…");
@@ -198,12 +196,7 @@ export default function Home() {
             {tokens.map(t => <button key={t.symbol} className={token.symbol === t.symbol ? "token active" : "token"} onClick={() => setToken(t)}>{t.symbol}</button>)}
           </div>
 
-          <label>Early claim fee token</label>
-          <div className="token-row">
-            {tokens.map(t => <button key={t.symbol} className={feeToken.symbol === t.symbol ? "token active" : "token"} onClick={() => setFeeToken(t)}>{t.symbol}</button>)}
-          </div>
-
-          <div className="summary-note">The first 180 seconds use 100 units of the selected fee token. All three supported fee tokens use 6 decimals.</div>
+          <div className="summary-note">During the first 180 seconds, the contract automatically uses any supported Tempo TIP-20 token in the claimant wallet with at least 100 units. After that, claiming is free.</div>
 
           <label>Total amount to deposit</label>
           <div className="input-wrap"><input value={amount} onChange={e => setAmount(e.target.value)} inputMode="decimal"/><span>{token.symbol}</span></div>
@@ -221,9 +214,8 @@ export default function Home() {
           <div className="summary-total">4217 <span>Tempo</span></div>
           <div className="summary-line"><span>TestingGas</span><b>{CONTRACT.slice(0, 8)}…{CONTRACT.slice(-6)}</b></div>
           <div className="summary-line"><span>Creation fee</span><b>1%</b></div>
-          <div className="summary-line"><span>Early claim fee</span><b>100 selected tokens</b></div>
+          <div className="summary-line"><span>Early claim fee</span><b>100 wallet token units</b></div>
           <div className="summary-line"><span>Early window</span><b>180 seconds</b></div>
-          <div className="summary-note">The claim-fee token is chosen independently from the drop funding token.</div>
         </aside>
       </div>
     </section>
