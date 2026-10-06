@@ -110,11 +110,10 @@ contract TestingGas {
         return drop.createdAt + EARLY_CLAIM_WINDOW;
     }
 
-    function isClaimable(uint256 dropId, address claimant) external view returns (bool claimable, uint256 earlyFee) {
+    function isClaimable(uint256 dropId, address claimant) external view returns (bool) {
         Drop storage drop = drops[dropId];
         if (drop.creator == address(0)) revert DropNotFound();
-        if (!drop.active || drop.remaining == 0 || hasClaimed[dropId][claimant]) return (false, 0);
-        return (true, 0);
+        return drop.active && drop.remaining > 0 && !hasClaimed[dropId][claimant];
     }
 
 
