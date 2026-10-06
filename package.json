@@ -16,7 +16,11 @@
     "viem": "2.56.8",
     "@reown/appkit": "^1.8.24",
     "@reown/appkit-adapter-wagmi": "^1.8.24",
-    "wagmi": "^2.19.5"
+    "wagmi": "^2.19.5",
+    "@x402/core": "^2.21.0",
+    "@x402/evm": "^2.21.0",
+    "@x402/extensions": "^2.21.0",
+    "@x402/svm": "^2.21.0"
   },
   "devDependencies": {
     "typescript": "latest",
