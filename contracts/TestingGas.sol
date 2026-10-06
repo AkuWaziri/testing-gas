@@ -11,12 +11,16 @@ contract TestingGas {
     uint256 public constant EARLY_CLAIM_WINDOW = 180;
     uint256 public constant EARLY_CLAIM_FEE = 100_000_000;
 
+    address public constant USDC = 0x20C000000000000000000000B9537D11C60E8B50;
+    address public constant USDT = 0x20C00000000000000000000014F22CA97301EB73;
+    address public constant PATH_USD = 0x20C0000000000000000000000000000000000000;
+
     address public immutable feeRecipient;
-    address public immutable earlyClaimFeeToken;
 
     struct Drop {
         address creator;
         address token;
+        address earlyClaimFeeToken;
         uint256 totalAmount;
         uint256 remaining;
         uint256 createdAt;
@@ -28,11 +32,20 @@ contract TestingGas {
     mapping(uint256 => Drop) public drops;
     mapping(uint256 => mapping(address => bool)) public hasClaimed;
 
-    event DropCreated(uint256 indexed dropId, address indexed creator, address indexed token, uint256 amount, uint256 creationFee, uint256 createdAt);
+    event DropCreated(
+        uint256 indexed dropId,
+        address indexed creator,
+        address indexed token,
+        uint256 amount,
+        uint256 creationFee,
+        uint256 createdAt,
+        address earlyClaimFeeToken
+    );
     event Claimed(uint256 indexed dropId, address indexed claimant, uint256 amount, uint256 earlyClaimFee);
     event DropClosed(uint256 indexed dropId);
 
     error InvalidToken();
+    error InvalidEarlyClaimFeeToken();
     error InvalidAmount();
     error DropNotFound();
     error DropInactive();
@@ -41,15 +54,14 @@ contract TestingGas {
     error TransferFailed();
     error FeeTransferFailed();
 
-    constructor(address _feeRecipient, address _earlyClaimFeeToken) {
+    constructor(address _feeRecipient) {
         require(_feeRecipient != address(0), "fee recipient");
-        require(_earlyClaimFeeToken != address(0), "fee token");
         feeRecipient = _feeRecipient;
-        earlyClaimFeeToken = _earlyClaimFeeToken;
     }
 
-    function createDrop(address token, uint256 amount) external returns (uint256 dropId) {
+    function createDrop(address token, uint256 amount, address _earlyClaimFeeToken) external returns (uint256 dropId) {
         if (token == address(0)) revert InvalidToken();
+        if (!_isSupportedFeeToken(_earlyClaimFeeToken)) revert InvalidEarlyClaimFeeToken();
         if (amount == 0) revert InvalidAmount();
 
         uint256 creationFee = amount / 100;
@@ -57,8 +69,8 @@ contract TestingGas {
         if (creationFee > 0 && !IERC20(token).transferFrom(msg.sender, feeRecipient, creationFee)) revert FeeTransferFailed();
 
         dropId = nextDropId++;
-        drops[dropId] = Drop(msg.sender, token, amount, amount, block.timestamp, 0, true);
-        emit DropCreated(dropId, msg.sender, token, amount, creationFee, block.timestamp);
+        drops[dropId] = Drop(msg.sender, token, _earlyClaimFeeToken, amount, amount, block.timestamp, 0, true);
+        emit DropCreated(dropId, msg.sender, token, amount, creationFee, block.timestamp, _earlyClaimFeeToken);
     }
 
     function claim(uint256 dropId) external {
@@ -74,7 +86,7 @@ contract TestingGas {
 
         if (!exempt && block.timestamp < drop.createdAt + EARLY_CLAIM_WINDOW) {
             earlyFee = EARLY_CLAIM_FEE;
-            if (!IERC20(earlyClaimFeeToken).transferFrom(msg.sender, feeRecipient, earlyFee)) revert FeeTransferFailed();
+            if (!IERC20(drop.earlyClaimFeeToken).transferFrom(msg.sender, feeRecipient, earlyFee)) revert FeeTransferFailed();
         }
 
         hasClaimed[dropId][msg.sender] = true;
@@ -89,5 +101,9 @@ contract TestingGas {
         }
 
         emit Claimed(dropId, msg.sender, 1, earlyFee);
+    }
+
+    function _isSupportedFeeToken(address token) internal pure returns (bool) {
+        return token == USDC || token == USDT || token == PATH_USD;
     }
 }
