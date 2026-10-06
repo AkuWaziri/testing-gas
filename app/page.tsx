@@ -145,7 +145,7 @@ async function waitForReceipt(provider: NonNullable<Window["ethereum"]>, hash: s
   throw new Error("Transaction confirmation timed out. Check the transaction on Tempo Explorer.");
 }
 
-export default function Home() {
+function HomeWithWallet() {
   const [token, setToken] = useState("USDC");
   const [amount, setAmount] = useState("5");
   const [claims, setClaims] = useState("10");
@@ -464,4 +464,19 @@ const ownedLogs = logs.filter((log) => (log.topics?.[2] ?? "").slice(-40).toLowe
       <footer><div className="brand"><img className="brand-logo" src="/satodrops-logo.svg" alt="SatoDrops" /><span>SatoDrops</span></div><span>Stablecoins programmable rewards, powered by Tempo.</span><div className="social-links"><a className="social-link" href="https://x.com/Satodrops" target="_blank" rel="noreferrer" aria-label="SatoDrops on X" title="SatoDrops on X"><span className="x-logo">𝕏</span></a><a className="social-link" href="#" aria-label="SatoDrops on Telegram" title="Telegram"><Send size={16}/></a></div><a href="https://tempo.xyz" target="_blank" rel="noreferrer">Built for Tempo <ArrowUpRight size={14}/></a></footer>
     </main>
   );
+}
+
+export default function Home() {
+  if (!WALLETCONNECT_PROJECT_ID || !wagmiAdapter) {
+    return (
+      <main style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 24 }}>
+        <div style={{ maxWidth: 560, textAlign: "center" }}>
+          <h1>Wallet connection is not configured</h1>
+          <p>Set NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID in the testing-gas Vercel environment and redeploy.</p>
+        </div>
+      </main>
+    );
+  }
+
+  return <HomeWithWallet />;
 }
