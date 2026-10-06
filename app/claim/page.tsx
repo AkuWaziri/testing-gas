@@ -50,7 +50,7 @@ async function findFeeToken(wallet:string){
   if(seen.has(t))continue;
   seen.add(t);
   try{
-   const valid=await rpc("eth_call",[{to:TIP20_FACTORY,data:"0x"+(await import("viem")).encodeFunctionData({abi:[{type:"function",name:"isTIP20",stateMutability:"view",inputs:[{name:"token",type:"address"}],outputs:[{name:"",type:"bool"}]}] as const,functionName:"isTIP20",args:[token as `0x${string}`]})},"latest"]);
+   const valid=await rpc("eth_call",[{to:TIP20_FACTORY,data:encodeFunctionData({abi:[{type:"function",name:"isTIP20",stateMutability:"view",inputs:[{name:"token",type:"address"}],outputs:[{name:"",type:"bool"}]}] as const,functionName:"isTIP20",args:[token as `0x${string}`]})},"latest"]);
    if(BigInt(String(valid))===0n)continue;
    const balance=await rpc("eth_call",[{to:token,data:"0x70a08231"+"0".repeat(24)+wallet.slice(2)},"latest"]);
    if(BigInt(String(balance))>=100000000n)return token;
