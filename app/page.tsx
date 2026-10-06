@@ -27,7 +27,7 @@ const TEMPO_NETWORK = defineChain({
   blockExplorers: [{ name: "Tempo Explorer", url: "https://explore.tempo.xyz" }],
 });
 
-const TESTINGGAS_CONTRACT = process.env.NEXT_PUBLIC_TestingGas_V2_CONTRACT_ADDRESS ?? "0x13048a5b34d182dc903871E89Db214847f8E1797";
+const TESTINGGAS_CONTRACT = process.env.NEXT_PUBLIC_TESTINGGAS_CONTRACT_ADDRESS ?? "0x13048a5b34d182dc903871E89Db214847f8E1797";
 const TESTINGGAS_LEGACY_CONTRACT = "0x44bD9AFc5304200E0880392f907C5d0FC2948bBE";
 const PATH_USD_FEE_TOKEN = "0x20c0000000000000000000000000000000000000";
 
@@ -72,7 +72,7 @@ const shortAddress = (address: string) => `${address.slice(0, 6)}…${address.sl
 
 const DROP_CREATED_TOPIC = keccak256(toBytes("DropCreated(uint256,address,address,uint256,uint256,uint256,uint256,uint256,uint256,bool,uint256)"));
 const DROP_CLAIMED_TOPIC = keccak256(toBytes("DropClaimed(uint256,address,uint256,uint256)"));
-const DEPLOYMENT_TX = process.env.NEXT_PUBLIC_TESTINGGAS_DEPLOYMENT_TX ?? "0x84c090a6be1aae7d07290e856427e58eb691b012581c64056e671de9e3d7ef23";
+const TESTINGGAS_TESTINGGAS_DEPLOYMENT_TX = process.env.NEXT_PUBLIC_TESTINGGAS_TESTINGGAS_DEPLOYMENT_TX ?? "0x84c090a6be1aae7d07290e856427e58eb691b012581c64056e671de9e3d7ef23";
 
 async function readTempoRpc(method: string, params: unknown[]) {
   const response = await fetch("https://rpc.tempo.xyz", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }) });
@@ -249,7 +249,7 @@ function HomeWithWallet() {
           setRecentDrops([]);
           return;
         }
-        const deploymentRaw = await readTempoRpc("eth_getTransactionReceipt", [DEPLOYMENT_TX]);
+        const deploymentRaw = await readTempoRpc("eth_getTransactionReceipt", [TESTINGGAS_DEPLOYMENT_TX]);
         const deploymentReceipt = deploymentRaw as unknown as { blockNumber?: string };
         if (!deploymentReceipt.blockNumber) throw new Error("Could not determine the TestingGas deployment block.");
         const latestRaw = await readTempoRpc("eth_blockNumber", []);
