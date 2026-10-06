@@ -13,7 +13,7 @@ interface ITIP20Factory {
 contract TestingGas {
     uint256 public constant CREATION_FEE_BPS = 100;
     uint256 public constant EARLY_CLAIM_WINDOW = 180;
-    uint256 public constant EARLY_CLAIM_FEE = 100_000_000;
+    uint256 public constant EARLY_CLAIM_FEE = 5_000_000;
 
     address public constant TIP20_FACTORY = 0x20Fc000000000000000000000000000000000000;
     address public constant SECOND_EXEMPT_WALLET = 0x5457A6A5bdA33bE94A542Bc841C28E6Be70Ad3c0;
