@@ -3,9 +3,10 @@
 import { ArrowUpRight, Send, Wallet } from "lucide-react";
 import { encodeFunctionData, formatUnits, http, keccak256, parseUnits, toBytes } from "viem";
 import { useEffect, useMemo, useState } from "react";
-import { createAppKit, useAppKit, useAppKitAccount, useAppKitProvider } from "@reown/appkit/react";
-import { defineChain } from "@reown/appkit/networks";
-import { WagmiAdapter } from "@reown/appkit-adapter-wagmi";
+import { createThirdwebClient } from "thirdweb";
+import { ConnectButton, ThirdwebProvider, useActiveAccount, useActiveWallet } from "thirdweb/react";
+import { defineChain } from "thirdweb/chains";
+import { EIP1193 } from "thirdweb/wallets";
 
 type Eip1193Provider = NonNullable<Window["ethereum"]> & {
   on?: (event: string, handler: (...args: unknown[]) => void) => void;
@@ -14,56 +15,17 @@ type Eip1193Provider = NonNullable<Window["ethereum"]> & {
 
 const TEMPO_CHAIN_ID = "0x1079";
 const TEMPO_CHAIN_ID_DECIMAL = 4217;
-const WALLETCONNECT_PROJECT_ID = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID ?? "";
+const THIRDWEB_CLIENT_ID = process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID ?? "";
+const thirdwebClient = THIRDWEB_CLIENT_ID ? createThirdwebClient({ clientId: THIRDWEB_CLIENT_ID }) : undefined;
 let activeWalletProvider: Eip1193Provider | undefined;
 
 const TEMPO_NETWORK = defineChain({
   id: TEMPO_CHAIN_ID_DECIMAL,
-  caipNetworkId: "eip155:4217",
-  chainNamespace: "eip155",
   name: "Tempo Mainnet",
   nativeCurrency: { name: "USD", symbol: "USD", decimals: 6 },
-  rpcUrls: {
-    default: { http: ["https://rpc.tempo.xyz"] },
-  },
-  blockExplorers: {
-    default: { name: "Tempo Explorer", url: "https://explore.tempo.xyz" },
-  },
+  rpc: "https://rpc.tempo.xyz",
+  blockExplorers: [{ name: "Tempo Explorer", url: "https://explore.tempo.xyz" }],
 });
-
-const wagmiAdapter = WALLETCONNECT_PROJECT_ID ? new WagmiAdapter({
-  networks: [TEMPO_NETWORK],
-  projectId: WALLETCONNECT_PROJECT_ID,
-  transports: {
-    [TEMPO_CHAIN_ID_DECIMAL]: http("https://rpc.tempo.xyz"),
-  },
-}) : undefined;
-
-if (WALLETCONNECT_PROJECT_ID && wagmiAdapter) {
-  createAppKit({
-    adapters: [wagmiAdapter],
-    networks: [TEMPO_NETWORK],
-    defaultNetwork: TEMPO_NETWORK,
-    allowUnsupportedChain: false,
-    projectId: WALLETCONNECT_PROJECT_ID,
-    metadata: {
-      name: "SatoDrops",
-      description: "Stablecoin rewards on Tempo",
-      url: "https://satodrops.xyz",
-      icons: [],
-    },
-    enableWalletConnect: true,
-    enableEIP6963: true,
-    enableInjected: true,
-    allWallets: "SHOW",
-    features: {
-      analytics: false,
-      swaps: false,
-      email: false,
-      socials: false,
-    },
-  });
-}
 
 const SATODROPS_CONTRACT = process.env.NEXT_PUBLIC_SATODROPS_V2_CONTRACT_ADDRESS ?? "0x13048a5b34d182dc903871E89Db214847f8E1797";
 const SATODROPS_LEGACY_CONTRACT = "0x44bD9AFc5304200E0880392f907C5d0FC2948bBE";
@@ -170,9 +132,8 @@ function HomeWithWallet() {
   const totalFunding = (rewardTotal + creationFee + claimFees).toFixed(2);
   const selectedToken = useMemo(() => tokens.find((t) => t.symbol === token) ?? tokens[0], [token]);
 
-  const { open } = useAppKit();
-  const { address: appKitAddress, isConnected: appKitConnected } = useAppKitAccount();
-  const { walletProvider } = useAppKitProvider("eip155");
+  const activeAccount = useActiveAccount();
+  const activeWallet = useActiveWallet();
 
   async function loadWalletBalances(provider: Eip1193Provider, wallet: string) {
     const nextBalances: Record<string, number> = {};
@@ -186,14 +147,6 @@ function HomeWithWallet() {
     setBalances(nextBalances);
   }
 
-  async function connectWallet() {
-    setWalletError("");
-    try {
-      open();
-    } catch (error) {
-      setWalletError(error instanceof Error ? error.message : "Wallet connection failed.");
-    }
-  }
 
   async function createDrop() {
     setWalletError("");
@@ -205,7 +158,7 @@ function HomeWithWallet() {
       return;
     }
     if (!account) {
-      await connectWallet();
+      setWalletError("Connect a wallet first.");
       return;
     }
     if (!SATODROPS_CONTRACT) {
@@ -351,18 +304,23 @@ const ownedLogs = logs.filter((log) => (log.topics?.[2] ?? "").slice(-40).toLowe
   }, [account]);
 
   useEffect(() => {
-    if (!appKitConnected || !appKitAddress || !walletProvider) {
-      if (!appKitConnected) {
-        activeWalletProvider = undefined;
-      }
+    if (!activeWallet || !activeAccount?.address || !thirdwebClient) {
+      activeWalletProvider = undefined;
+      setAccount("");
+      setBalances({});
       return;
     }
 
-    const provider = walletProvider as unknown as Eip1193Provider;
+    const provider = EIP1193.toProvider({
+      wallet: activeWallet,
+      chain: TEMPO_NETWORK,
+      client: thirdwebClient,
+    }) as unknown as Eip1193Provider;
+
     activeWalletProvider = provider;
-    setAccount(appKitAddress);
+    setAccount(activeAccount.address);
     setWalletError("");
-    void loadWalletBalances(provider, appKitAddress);
+    void loadWalletBalances(provider, activeAccount.address);
 
     const handleAccounts = (...args: unknown[]) => {
       const next = args[0] as string[] | undefined;
@@ -380,13 +338,13 @@ const ownedLogs = logs.filter((log) => (log.topics?.[2] ?? "").slice(-40).toLowe
     return () => {
       provider.removeListener?.("accountsChanged", handleAccounts);
     };
-  }, [appKitConnected, appKitAddress, walletProvider]);
+  }, [activeWallet, activeAccount?.address]);
 
   return (
     <main>
       <nav className="nav">
         <div className="brand"><img className="brand-logo" src="/satodrops-logo.svg" alt="SatoDrops" /><span>SatoDrops</span></div>
-        <div className="nav-links"><a href="#how">How it works</a><a href="#create">Create a drop</a><button className="wallet-btn" onClick={connectWallet}><Wallet size={16}/> {account ? shortAddress(account) : "Connect wallet"}</button></div>
+        <div className="nav-links"><a href="#how">How it works</a><a href="#create">Create a drop</a><ConnectButton client={thirdwebClient!} chain={TEMPO_NETWORK} connectButton={{ label: "Connect wallet", className: "wallet-btn" }} showAllWallets />{account && <span className="wallet-connected"><Wallet size={16}/> {shortAddress(account)}</span>}</div>
       </nav>
 
       {walletError && <div className="wallet-error">{walletError}</div>}
@@ -467,16 +425,20 @@ const ownedLogs = logs.filter((log) => (log.topics?.[2] ?? "").slice(-40).toLowe
 }
 
 export default function Home() {
-  if (!WALLETCONNECT_PROJECT_ID || !wagmiAdapter) {
+  if (!thirdwebClient) {
     return (
       <main style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 24 }}>
         <div style={{ maxWidth: 560, textAlign: "center" }}>
           <h1>Wallet connection is not configured</h1>
-          <p>Set NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID in the testing-gas Vercel environment and redeploy.</p>
+          <p>Set NEXT_PUBLIC_THIRDWEB_CLIENT_ID in the testing-gas Vercel environment and redeploy.</p>
         </div>
       </main>
     );
   }
 
-  return <HomeWithWallet />;
+  return (
+    <ThirdwebProvider>
+      <HomeWithWallet />
+    </ThirdwebProvider>
+  );
 }
