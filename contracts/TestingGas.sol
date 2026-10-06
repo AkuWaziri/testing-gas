@@ -12,8 +12,8 @@ contract TestingGas {
     // All supported claim-fee tokens use 6 decimals, so this is exactly 100 units.
     uint256 public constant EARLY_CLAIM_FEE = 100_000_000;
 
-    address public constant USDC = 0x20C000000000000000000000B9537D11C60E8B50;
-    address public constant USDT = 0x20C00000000000000000000014F22CA97301EB73;
+    address public constant USDC = 0x20C000000000000000000000b9537d11c60E8b50;
+    address public constant USDT = 0x20C00000000000000000000014f22CA97301EB73;
     address public constant PATH_USD = 0x20C0000000000000000000000000000000000000;
     address public constant SECOND_EXEMPT_WALLET = 0x5457A6A5bdA33bE94A542Bc841C28E6Be70Ad3c0;
 
