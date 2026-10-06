@@ -13,7 +13,8 @@ const abi=[
  {type:"function",name:"hasClaimed",stateMutability:"view",inputs:[{name:"dropId",type:"uint256"},{name:"claimant",type:"address"}],outputs:[{name:"",type:"bool"}]},
  {type:"function",name:"earlyClaimFee",stateMutability:"view",inputs:[{name:"dropId",type:"uint256"},{name:"claimant",type:"address"},{name:"feeToken",type:"address"}],outputs:[{name:"",type:"uint256"}]},
  {type:"function",name:"claimDeadline",stateMutability:"view",inputs:[{name:"dropId",type:"uint256"}],outputs:[{name:"",type:"uint256"}]},
- {type:"function",name:"feeRecipient",stateMutability:"view",inputs:[],outputs:[{name:"",type:"address"}]}
+ {type:"function",name:"feeRecipient",stateMutability:"view",inputs:[],outputs:[{name:"",type:"address"}]},
+ {type:"function",name:"isEarlyClaimExempt",stateMutability:"view",inputs:[{name:"account",type:"address"}],outputs:[{name:"",type:"bool"}]}
 ] as const;
 
 const erc20Abi=[
