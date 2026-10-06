@@ -131,7 +131,7 @@ export default function Home() {
 
       const logs = (await rpc("eth_getTransactionReceipt", [tx])).logs || [];
       const topic = keccak256(toBytes(
-        "DropCreated(uint256,address,address,uint256,uint256,uint256,address)"
+        "DropCreated(uint256,address,address,uint256,uint256,uint256)"
       ));
       const log = logs.find(
         (x: any) =>
