@@ -295,7 +295,7 @@ export default function ClaimPage() {
   return (
     <main className="claim-page">
       <nav className="nav">
-        <a className="brand" href="/"><span className="brand-mark">S</span><span>TestingGas</span></a>
+        <a className="brand" href="/"><span className="brand-mark">T</span><span>TestingGas</span></a>
         <span className="eyebrow">TEMPO MAINNET</span>
       </nav>
       <section className="claim-shell">
