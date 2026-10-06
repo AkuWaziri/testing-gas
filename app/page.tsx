@@ -111,8 +111,6 @@ function HomeWithWallet() {
   const [token, setToken] = useState("USDC");
   const [amount, setAmount] = useState("5");
   const [claims, setClaims] = useState("10");
-  const [claimMode, setClaimMode] = useState<"public"|"wallet">("public");
-  const [walletsText, setWalletsText] = useState("");
   const [message, setMessage] = useState("Bug bounty rewards for Popo Teams");
   const [created, setCreated] = useState(false);
   const [account, setAccount] = useState("");
@@ -122,9 +120,7 @@ function HomeWithWallet() {
   const [recentDrops, setRecentDrops] = useState<Array<{ id:string; creator:string; token:typeof tokens[number]; amountPerClaim:bigint; maxClaims:bigint; claimed:bigint; creationTx:string; claimTxs:string[] }>>([]);
   const [recentDropsLoading, setRecentDropsLoading] = useState(true);
 
-  const walletList = walletsText.split(/[\s,]+/).map((value) => value.trim()).filter(Boolean);
-  const walletCount = walletList.length;
-  const effectiveClaims = claimMode === "wallet" ? walletCount : Number(claims || 0);
+  const effectiveClaims = Number(claims || 0);
   const rewardTotal = Number(amount || 0) * effectiveClaims;
   const creationFee = rewardTotal * 0.01;
   const claimFees = rewardTotal * 0.005;
@@ -171,26 +167,10 @@ function HomeWithWallet() {
       setWalletError("Enter a reward amount greater than zero.");
       return;
     }
-    if (claimMode === "public" && (!Number.isInteger(claimCount) || claimCount < 1 || claimCount > 20)) {
+    if (!Number.isInteger(claimCount) || claimCount < 1 || claimCount > 20) {
       setWalletError("Public drops can have between 1 and 20 claims.");
       return;
     }
-    if (claimMode === "wallet") {
-      if (walletCount < 1 || walletCount > 100) {
-        setWalletError("Add between 1 and 100 wallet addresses.");
-        return;
-      }
-      const unique = new Set(walletList.map((wallet) => wallet.toLowerCase()));
-      if (unique.size !== walletCount) {
-        setWalletError("Wallet list contains duplicate addresses.");
-        return;
-      }
-      if (walletList.some((wallet) => !/^0x[a-fA-F0-9]{40}$/.test(wallet))) {
-        setWalletError("Every wallet must be a valid EVM address.");
-        return;
-      }
-    }
-
     try {
       setCreating(true);
 
@@ -226,8 +206,8 @@ function HomeWithWallet() {
           rewardPerClaim,
           BigInt(effectiveClaims),
           0n,
-          claimMode === "wallet",
-          (claimMode === "wallet" ? walletList : []) as `0x${string}`[],
+          false,
+          [] as `0x${string}`[],
           message,
         ],
       });
@@ -355,7 +335,7 @@ const ownedLogs = logs.filter((log) => (log.topics?.[2] ?? "").slice(-40).toLowe
         <div className="hero-copy">
           <div className="eyebrow"><span className="live-dot"/> POWERED BY TEMPO</div>
           <h1>Stablecoins rewards.<br/><span>Instantly claimable..</span></h1>
-          <p className="hero-text">Fund a stablecoin reward, share one link, and let people claim it on fcfs or wallet specific, all onchain.</p>
+          <p className="hero-text">Fund a stablecoin reward, share one link, and let people claim it on fcfs, all onchain.</p>
           <div className="hero-actions"><a className="primary" href="#create">Create a drop <ArrowUpRight size={17}/></a><a className="secondary" href="#how">See how it works</a></div>
           <div className="trust-row"><span>Stablecoin-native</span><i/> <span>Tempo mainnet</span><i/> <span>Non-custodial</span></div>
         </div>
@@ -381,9 +361,7 @@ const ownedLogs = logs.filter((log) => (log.topics?.[2] ?? "").slice(-40).toLowe
         <div className="builder">
           <div className="form-card">
             <label>Who can claim?</label>
-            <div className="token-row">{[["public","Public · first come first serve"],["wallet","Specific wallets · up to 100"]].map(([value,label])=><button key={value} className={claimMode===value?"token active":"token"} onClick={()=>setClaimMode(value as "public"|"wallet")}>{label}</button>)}</div>
-            {claimMode === "wallet" && <div className="input-wrap" style={{marginBottom:18}}><textarea value={walletsText} onChange={e=>setWalletsText(e.target.value)} placeholder="0x1234…&#10;0xabcd…" style={{minHeight:110}}/><span>{walletCount}/100</span></div>}
-            <div className="summary-note" style={{marginBottom:18}}>{claimMode==="public" ? "Anyone can claim until the drop is full." : "Only the wallets listed here can claim. Each listed wallet can claim once."}</div>
+            <div className="summary-note" style={{marginBottom:18}}>Anyone can claim until the drop is full.</div>
             <label>Reward token</label>
             <div className="token-row">{tokens.map(t=><button key={t.symbol} className={token===t.symbol?"token active":"token"} onClick={()=>setToken(t.symbol)}>
   <img src={t.logo} alt="" width={20} height={20} style={{borderRadius:"50%",objectFit:"contain",verticalAlign:"middle"}} />
@@ -392,7 +370,7 @@ const ownedLogs = logs.filter((log) => (log.topics?.[2] ?? "").slice(-40).toLowe
             {account && <div className="balance-row"><span>Connected balance</span><b>{(balances[selectedToken.symbol] ?? 0).toFixed(2)} {selectedToken.symbol}</b></div>}
             <div className="two-col">
               <div><label>Reward per person</label><div className="input-wrap"><input value={amount} onChange={e=>setAmount(e.target.value)} inputMode="decimal"/><span>{token}</span></div></div>
-              <div><label>{claimMode==="wallet" ? "Eligible wallets" : "Number of claims"}</label><div className="input-wrap"><input value={claimMode==="wallet"?String(walletCount):claims} onChange={e=>setClaims(e.target.value)} inputMode="numeric" max={claimMode==="wallet"?100:20} disabled={claimMode==="wallet"}/><span>people</span></div></div>
+              <div><label>Number of claims</label><div className="input-wrap"><input value={claims} onChange={e=>setClaims(e.target.value)} inputMode="numeric" max={20}/><span>people</span></div></div>
             </div>
             <label>What is this reward for?</label>
             <textarea value={message} onChange={e=>setMessage(e.target.value)} maxLength={120}/>
@@ -403,7 +381,7 @@ const ownedLogs = logs.filter((log) => (log.topics?.[2] ?? "").slice(-40).toLowe
             <div className="summary-label">DROP SUMMARY</div>
             <div className="summary-total">{total} <span>{token}</span></div>
             <div className="summary-line"><span>Per claim</span><b>{amount || "0"} {token}</b></div>
-            <div className="summary-line"><span>{claimMode==="wallet" ? "Eligible wallets" : "Claims"}</span><b>{effectiveClaims || "0"}</b></div>
+            <div className="summary-line"><span>Claims</span><b>{effectiveClaims || "0"}</b></div>
             <div className="summary-line total-funding"><span>Total to fund</span><b>{totalFunding} {token}</b></div>
             <div className="summary-line"><span>Network</span><b><span className="network-dot"/> Tempo</b></div>
             <div className="summary-note">You fund the rewards plus the 1% creation fee and 0.5% claim fees upfront. Claimants receive the full reward amount without the need to pay for extra gas fees.</div>
