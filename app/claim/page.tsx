@@ -15,13 +15,13 @@ declare global {
 const TEMPO_CHAIN_ID = "0x1079";
 const TEMPO_RPC = "https://rpc.tempo.xyz";
 const EXPLORER = "https://explore.tempo.xyz";
-const SATODROPS_CONTRACT = process.env.NEXT_PUBLIC_SATODROPS_V2_CONTRACT_ADDRESS ?? "0x13048a5b34d182dc903871E89Db214847f8E1797";
-const SATODROPS_LEGACY_CONTRACT = "0x44bD9AFc5304200E0880392f907C5d0FC2948bBE";
+const TESTINGGAS_CONTRACT = process.env.NEXT_PUBLIC_TestingGas_V2_CONTRACT_ADDRESS ?? "0x13048a5b34d182dc903871E89Db214847f8E1797";
+const TESTINGGAS_LEGACY_CONTRACT = "0x44bD9AFc5304200E0880392f907C5d0FC2948bBE";
 const PATH_USD_FEE_TOKEN = "0x20c0000000000000000000000000000000000000";
 const DROP_CREATED_TOPIC = keccak256(toBytes("DropCreated(uint256,address,address,uint256,uint256,uint256,uint256,uint256,uint256,bool,uint256)"));
 const DROP_CLAIMED_TOPIC = keccak256(toBytes("DropClaimed(uint256,address,uint256,uint256)"));
 const LEGACY_DEPLOYMENT_TX = "0xda7d7912b86f1323ecd3ccc7355b2cbac458755947d82526b98b57df14dc0d70";
-const CURRENT_DEPLOYMENT_TX = process.env.NEXT_PUBLIC_SATODROPS_DEPLOYMENT_TX ?? "0x84c090a6be1aae7d07290e856427e58eb691b012581c64056e671de9e3d7ef23";
+const CURRENT_DEPLOYMENT_TX = process.env.NEXT_PUBLIC_TESTINGGAS_DEPLOYMENT_TX ?? "0x84c090a6be1aae7d07290e856427e58eb691b012581c64056e671de9e3d7ef23";
 
 const tokens: Record<string, { symbol: string; address: string; decimals: number }> = {
   "0x20c000000000000000000000b9537d11c60e8b50": { symbol: "USDC", address: "0x20c000000000000000000000b9537d11c60e8b50", decimals: 6 },
@@ -89,8 +89,8 @@ async function getDropLogs(dropId: string, contractAddress: string, deploymentTx
   let fromBlock: bigint;
   if (deploymentTx) {
     const deploymentRaw = await rpc<{ blockNumber?: string } | null>("eth_getTransactionReceipt", [deploymentTx]);
-    if (!deploymentRaw) throw new Error("Could not locate the SatoDrops deployment transaction.");
-    if (!deploymentRaw.blockNumber) throw new Error("Could not determine the SatoDrops deployment block.");
+    if (!deploymentRaw) throw new Error("Could not locate the TestingGas deployment transaction.");
+    if (!deploymentRaw.blockNumber) throw new Error("Could not determine the TestingGas deployment block.");
     fromBlock = BigInt(deploymentRaw.blockNumber);
   } else {
     const latestRaw = await rpc<string>("eth_blockNumber", []);
@@ -195,13 +195,13 @@ export default function ClaimPage() {
     const params = new URLSearchParams(window.location.search);
     const id = params.get("id") ?? "";
     const isCurrent = params.get("v") === "2";
-    const selectedContract = isCurrent ? SATODROPS_CONTRACT : SATODROPS_LEGACY_CONTRACT;
+    const selectedContract = isCurrent ? TESTINGGAS_CONTRACT : TESTINGGAS_LEGACY_CONTRACT;
     const selectedDeploymentTx = isCurrent ? CURRENT_DEPLOYMENT_TX : LEGACY_DEPLOYMENT_TX;
     setDropId(id);
     setContractAddress(selectedContract);
     setDeploymentTx(selectedDeploymentTx);
     if (!selectedContract || !id || !/^\d+$/.test(id)) {
-      setError(!SATODROPS_CONTRACT ? "SatoDrops contract is not configured yet." : "Invalid claim link.");
+      setError(!TESTINGGAS_CONTRACT ? "TestingGas contract is not configured yet." : "Invalid claim link.");
       setLoading(false);
       return;
     }
@@ -295,19 +295,19 @@ export default function ClaimPage() {
   return (
     <main className="claim-page">
       <nav className="nav">
-        <a className="brand" href="/"><span className="brand-mark">S</span><span>SatoDrops</span></a>
+        <a className="brand" href="/"><span className="brand-mark">S</span><span>TestingGas</span></a>
         <span className="eyebrow">TEMPO MAINNET</span>
       </nav>
       <section className="claim-shell">
         <div className="claim-card">
-          <div className="eyebrow">SATODROPS CLAIM · #{dropId || "—"}</div>
+          <div className="eyebrow">TestingGas CLAIM · #{dropId || "—"}</div>
           {loading && <h1>Loading drop…</h1>}
-          {!loading && error && !drop && <><h1>Claim link unavailable</h1><p>{error}</p><a className="secondary" href="/">Back to SatoDrops</a></>}
+          {!loading && error && !drop && <><h1>Claim link unavailable</h1><p>{error}</p><a className="secondary" href="/">Back to TestingGas</a></>}
           {!loading && drop && (
             <>
               <div className="claim-token">{token?.symbol ?? "TOKEN"}</div>
               <div className="claim-amount">{formatUnits(drop.amountPerClaim, token?.decimals ?? 6)} <span>{token?.symbol ?? ""}</span></div>
-              <p className="claim-message">{drop.message || "A SatoDrops reward is waiting for you."}</p>
+              <p className="claim-message">{drop.message || "A TestingGas reward is waiting for you."}</p>
               <div className="claim-meta"><span>{drop.claimed.toString()} / {drop.maxClaims.toString()} claimed</span><span>{claimProgress.toFixed(2)}% claimed</span></div>
               <div className="drop-progress"><div style={{ width: `${claimProgress}%` }}/></div>
               <div className={allClaimed ? "drop-status complete" : "drop-status"}>{allClaimed ? "All claims completed" : `${claimsRemaining.toString()} claim${claimsRemaining === 1n ? "" : "s"} remaining`}</div>
