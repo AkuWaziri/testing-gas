@@ -4,7 +4,7 @@ import { ArrowUpRight, Wallet } from "lucide-react";
 import { encodeFunctionData, formatUnits } from "viem";
 import { useEffect, useState } from "react";
 
-const RPC="https://rpc.tempo.xyz", EXPLORER="https://explore.tempo.xyz", CONTRACT="0xA2E7511ACb110520B067Cd753448D5C9854AA007", GAS_TOKEN="0x20C0000000000000000000000000000000000000", CHAIN="0x1079";
+const RPC="https://rpc.tempo.xyz", EXPLORER="https://explore.tempo.xyz", CONTRACT="0x2a6722e0c00DC1BA531BB15c551bF2F080285603", GAS_TOKEN="0x20C0000000000000000000000000000000000000", CHAIN="0x1079";
 const SECOND_EXEMPT="0x5457A6A5bdA33bE94A542Bc841C28E6Be70Ad3c0";
 
 const abi=[
